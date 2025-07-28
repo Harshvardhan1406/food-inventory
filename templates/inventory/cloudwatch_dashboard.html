@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">CloudWatch Metrics Dashboard</h1>
+        <p class="text-gray-600">
+            Showing metrics from {{ start_time|date:"F j, Y H:i" }} to {{ end_time|date:"F j, Y H:i" }}
+        </p>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total Batches -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Batches</h3>
+            <p class="text-3xl font-bold text-blue-600">{{ total_batches }}</p>
+        </div>
+
+        <!-- Page Views -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">24h Page Views</h3>
+            <p class="text-3xl font-bold text-green-600">
+                {% with page_views=metrics_data.page_views|last %}
+                    {% if page_views %}
+                        {{ page_views.Sum|floatformat:0 }}
+                    {% else %}
+                        0
+                    {% endif %}
+                {% endwith %}
+            </p>
+        </div>
+
+        <!-- New Batches -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">24h New Batches</h3>
+            <p class="text-3xl font-bold text-purple-600">
+                {% with new_batches=metrics_data.batch_created|last %}
+                    {% if new_batches %}
+                        {{ new_batches.Sum|floatformat:0 }}
+                    {% else %}
+                        0
+                    {% endif %}
+                {% endwith %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Status Distribution -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Batch Status Distribution</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Safe Batches -->
+            <div class="bg-green-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-green-700 mb-2">Safe</h3>
+                <p class="text-2xl font-bold text-green-600">
+                    {% with safe_batches=metrics_data.total_safe_batches|last %}
+                        {% if safe_batches %}
+                            {{ safe_batches.Sum|floatformat:0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    {% endwith %}
+                </p>
+            </div>
+
+            <!-- Expiring Soon -->
+            <div class="bg-yellow-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-yellow-700 mb-2">Expiring Soon</h3>
+                <p class="text-2xl font-bold text-yellow-600">
+                    {% with expiring_soon=metrics_data.total_expiring_soon_batches|last %}
+                        {% if expiring_soon %}
+                            {{ expiring_soon.Sum|floatformat:0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    {% endwith %}
+                </p>
+            </div>
+
+            <!-- Expired -->
+            <div class="bg-red-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-red-700 mb-2">Expired</h3>
+                <p class="text-2xl font-bold text-red-600">
+                    {% with expired_batches=metrics_data.total_expired_batches|last %}
+                        {% if expired_batches %}
+                            {{ expired_batches.Sum|floatformat:0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    {% endwith %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">Detailed Metrics</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sum</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for metric_name, datapoints in metrics_data.items %}
+                        {% for point in datapoints %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ metric_name|title }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ point.Sum|floatformat:0 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ point.Average|floatformat:2 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ point.Timestamp|date:"Y-m-d H:i" }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

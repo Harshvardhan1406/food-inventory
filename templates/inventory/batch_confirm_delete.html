@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Batch{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Delete Batch
+        </h3>
+    </div>
+    
+    <div class="px-4 py-5 sm:p-6">
+        <div class="text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Delete Confirmation</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    Are you sure you want to delete batch "{{ batch.batch_id }} - {{ batch.product_name }}"?<br>
+                    This action cannot be undone.
+                </p>
+            </div>
+            <div class="mt-5 flex justify-center space-x-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700">
+                        Delete
+                    </button>
+                </form>
+                <a href="{% url 'batch_list' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

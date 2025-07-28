@@ -1,0 +1,99 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Inventory System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg mb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Left side -->
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <a href="{% url 'batch_list' %}" class="text-xl font-bold text-blue-600 hover:text-blue-700">
+                            Food Inventory
+                        </a>
+                    </div>
+                    
+                    <!-- Navigation Links -->
+                    {% if user.is_authenticated %}
+                    <div class="hidden md:flex md:items-center md:ml-10 space-x-8">
+                        <a href="{% url 'batch_list' %}" 
+                           class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'batch_list' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
+                            Inventory
+                        </a>
+                        <a href="{% url 'cloudwatch_dashboard' %}" 
+                           class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'cloudwatch_dashboard' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
+                            Dashboard
+                        </a>
+                        {% if user.role == 'Manager' %}
+                        <a href="{% url 'user_list' %}" 
+                           class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'user_list' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
+                            Users
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Right side -->
+                <div class="flex items-center space-x-4">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'batch_create' %}" 
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out">
+                        Add Batch
+                    </a>
+                    <div class="flex items-center space-x-4 ml-4">
+                        <span class="text-gray-700 text-sm">{{ user.username }}</span>
+                        <div class="h-6 w-px bg-gray-300"></div>
+                        <a href="{% url 'profile' %}" 
+                           class="text-gray-600 hover:text-blue-600 text-sm font-medium">
+                            Profile
+                        </a>
+                        <div class="h-6 w-px bg-gray-300"></div>
+                        <a href="{% url 'logout' %}" 
+                           class="text-gray-600 hover:text-blue-600 text-sm font-medium">
+                            Logout
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center space-x-4">
+                        <a href="{% url 'login' %}" 
+                           class="text-gray-600 hover:text-blue-600 text-sm font-medium">
+                            Login
+                        </a>
+                        <div class="h-6 w-px bg-gray-300"></div>
+                        <a href="{% url 'register' %}" 
+                           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out">
+                            Register
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% for message in messages %}
+        <div class="rounded-md p-4 mb-6 {% if message.tags == 'success' %}bg-green-50 text-green-700{% elif message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-blue-50 text-blue-700{% endif %} shadow-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html> 
