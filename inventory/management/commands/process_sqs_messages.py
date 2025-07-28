@@ -4,11 +4,21 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.mail import send_mail
 from datetime import datetime
+import time
 
 class Command(BaseCommand):
     help = 'Process messages from SQS queue for expiry notifications'
 
     def handle(self, *args, **options):
+        if not hasattr(settings, 'SQS_QUEUE_URL') or not settings.SQS_QUEUE_URL:
+            self.stdout.write(self.style.WARNING(
+                "SQS_QUEUE_URL not set. SQS processing is disabled."
+            ))
+            # Sleep to keep the management command running without consuming CPU
+            while True:
+                time.sleep(60)
+            return
+
         # Initialize SQS client
         sqs = boto3.client('sqs',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -67,6 +77,7 @@ class Command(BaseCommand):
                     
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Error processing messages: {str(e)}"))
+                time.sleep(5)  # Wait a bit before retrying on error
     
     def _process_expired_items(self, items):
         """Process expired items - could send emails, update dashboard, etc."""
