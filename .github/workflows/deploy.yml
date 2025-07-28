@@ -36,6 +36,10 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: us-east-1
+
+    - name: Create S3 Bucket
+      run: |
+        aws s3api create-bucket --bucket foodinventorywebsite-deployments --region us-east-1 || true
         
     - name: Deploy to Elastic Beanstalk
       uses: einaregilsson/beanstalk-deploy@v21
@@ -48,4 +52,6 @@ jobs:
         region: us-east-1
         deployment_package: deploy.zip
         version_label: ${{ github.sha }}
-        existing_bucket_name: elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }} 
+        existing_bucket_name: foodinventorywebsite-deployments
+        wait_for_deployment: true
+        wait_for_environment_recovery: 300 
