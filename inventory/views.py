@@ -12,6 +12,8 @@ import os
 from .dynamodb_models import DynamoDBInventory
 from datetime import datetime
 from .cloudwatch_utils import cloudwatch_manager
+from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 def get_s3_client():
     return boto3.client('s3',
@@ -91,16 +93,43 @@ def delete_from_s3(file_path):
 def is_manager(user):
     return user.is_authenticated and user.is_manager()
 
+@ensure_csrf_cookie
 def register(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Registration successful!')
-            return redirect('batch_list')
+            try:
+                user = form.save()
+                login(request, user)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Registration successful!',
+                        'redirect_url': '/batch_list/'
+                    })
+                messages.success(request, 'Registration successful!')
+                return redirect('batch_list')
+            except Exception as e:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'errors': str(e)
+                    }, status=500)
+                messages.error(request, f'Registration failed: {str(e)}')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
     else:
         form = CustomUserCreationForm()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid request method'
+        }, status=405)
     return render(request, 'registration/register.html', {'form': form})
 
 @login_required

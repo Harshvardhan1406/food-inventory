@@ -1,9 +1,7 @@
-name: Deploy to AWS Elastic Beanstalk
+name: Deploy to EC2
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -11,34 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
       with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run tests
-      run: |
-        python manage.py test
-    
-    - name: Generate deployment package
-      run: |
-        zip -r deploy.zip . -x "*.git*" "*.github*" "venv/*"
-    
-    - name: Deploy to EB
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-        application_name: inventory
-        environment_name: inventory-env
-        version_label: ${{ github.sha }}
-        region: us-east-1
-        deployment_package: deploy.zip 
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /home/ubuntu/food-inventory
+          git pull origin main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py migrate
+          sudo systemctl restart gunicorn 
