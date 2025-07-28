@@ -41,6 +41,6 @@ ENV/
 .ebextensions/
 .ebignore
 
-# Environment variables
+
 .env
 .env.local 
