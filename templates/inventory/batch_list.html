@@ -72,8 +72,8 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {% if is_manufacturer %}
                             <a href="{% url 'batch_update' batch.batch_id %}" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
-                            {% if user.is_manager %}
                             <a href="{% url 'batch_delete' batch.batch_id %}" class="text-red-600 hover:text-red-900">Delete</a>
                             {% endif %}
                         </td>

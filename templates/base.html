@@ -27,11 +27,15 @@
                            class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'batch_list' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
                             Inventory
                         </a>
+                        <a href="{% url 'supply_request_list' %}" 
+                           class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if 'supply_request' in request.resolver_match.url_name %}text-blue-600 border-b-2 border-blue-600{% endif %}">
+                            Supply Requests
+                        </a>
                         <a href="{% url 'cloudwatch_dashboard' %}" 
                            class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'cloudwatch_dashboard' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
                             Dashboard
                         </a>
-                        {% if user.role == 'Manager' %}
+                        {% if user.is_manufacturer %}
                         <a href="{% url 'user_list' %}" 
                            class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'user_list' %}text-blue-600 border-b-2 border-blue-600{% endif %}">
                             Users
@@ -44,10 +48,12 @@
                 <!-- Right side -->
                 <div class="flex items-center space-x-4">
                     {% if user.is_authenticated %}
+                    {% if user.is_manufacturer %}
                     <a href="{% url 'batch_create' %}" 
                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out">
                         Add Batch
                     </a>
+                    {% endif %}
                     <div class="flex items-center space-x-4 ml-4">
                         <span class="text-gray-700 text-sm">{{ user.username }}</span>
                         <div class="h-6 w-px bg-gray-300"></div>
@@ -56,10 +62,12 @@
                             Profile
                         </a>
                         <div class="h-6 w-px bg-gray-300"></div>
-                        <a href="{% url 'logout' %}" 
-                           class="text-gray-600 hover:text-blue-600 text-sm font-medium">
-                            Logout
-                        </a>
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-600 hover:text-blue-600 text-sm font-medium">
+                                Logout
+                            </button>
+                        </form>
                     </div>
                     {% else %}
                     <div class="flex items-center space-x-4">

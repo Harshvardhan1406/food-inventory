@@ -14,6 +14,7 @@ from datetime import datetime
 from .cloudwatch_utils import cloudwatch_manager
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from .models import SupplyRequest
 
 def get_s3_client():
     return boto3.client('s3',
@@ -90,8 +91,8 @@ def delete_from_s3(file_path):
             'ERROR'
         )
 
-def is_manager(user):
-    return user.is_authenticated and user.is_manager()
+def is_manufacturer(user):
+    return user.is_authenticated and user.is_manufacturer()
 
 @ensure_csrf_cookie
 def register(request):
@@ -171,16 +172,11 @@ def batch_list(request):
     for batch in batches:
         batch['expiry_date'] = datetime.strptime(batch['expiry_date'], '%Y-%m-%d').date()
         batch['production_date'] = datetime.strptime(batch['production_date'], '%Y-%m-%d').date()
-        print(f"Batch data: {batch}")
+        # Add edit permission flag
+        batch['can_edit'] = request.user.is_manufacturer()
     
-    # Put metrics for batch counts by status
-    status_counts = {}
-    for batch in batches:
-        status = batch.get('status', 'Unknown')
-        status_counts[status] = status_counts.get(status, 0) + 1
-    
-    for status, count in status_counts.items():
-        cloudwatch_manager.put_metric(f'Total{status.replace(" ", "")}Batches', count)
+    # Update batch status metrics
+    cloudwatch_manager.update_batch_status_metrics(batches)
     
     context = {
         'batches': batches,
@@ -189,10 +185,12 @@ def batch_list(request):
         'AWS_STORAGE_BUCKET_NAME': settings.AWS_STORAGE_BUCKET_NAME,
         'AWS_S3_REGION_NAME': settings.AWS_S3_REGION_NAME,
         'debug': settings.DEBUG,
+        'is_manufacturer': request.user.is_manufacturer(),
     }
     return render(request, 'inventory/batch_list.html', context)
 
 @login_required
+@user_passes_test(is_manufacturer)
 def batch_create(request):
     if request.method == 'POST':
         # Get form data
@@ -260,6 +258,7 @@ def batch_create(request):
     })
 
 @login_required
+@user_passes_test(is_manufacturer)
 def batch_update(request, batch_id):
     # Get existing batch
     batch = db.get_batch(batch_id)
@@ -310,7 +309,7 @@ def batch_update(request, batch_id):
     })
 
 @login_required
-@user_passes_test(is_manager)
+@user_passes_test(is_manufacturer)
 def batch_delete(request, batch_id):
     batch = db.get_batch(batch_id)
     if not batch:
@@ -335,7 +334,7 @@ def batch_delete(request, batch_id):
     return render(request, 'inventory/batch_confirm_delete.html', {'batch': batch})
 
 @login_required
-@user_passes_test(is_manager)
+@user_passes_test(is_manufacturer)
 def user_list(request):
     users = User.objects.all().order_by('username')
     return render(request, 'inventory/user_list.html', {'users': users})
@@ -346,18 +345,27 @@ def cloudwatch_dashboard(request):
     try:
         from datetime import timedelta
         
-        # Get metrics for the last 24 hours
+        # Get current metrics
+        metrics_data = {
+            'total_expired_batches': [{
+                'Maximum': cloudwatch_manager.get_current_metrics('TotalExpiredBatches')
+            }],
+            'total_expiring_soon_batches': [{
+                'Maximum': cloudwatch_manager.get_current_metrics('TotalExpiringSoonBatches')
+            }],
+            'total_safe_batches': [{
+                'Maximum': cloudwatch_manager.get_current_metrics('TotalSafeBatches')
+            }],
+        }
+        
+        # Get historical metrics for trends (last 24 hours)
         end_time = datetime.utcnow()
         start_time = end_time - timedelta(hours=24)
         
-        # Get various metrics
-        metrics_data = {
+        metrics_data.update({
             'page_views': cloudwatch_manager.get_metrics('PageViews', start_time, end_time),
             'batch_created': cloudwatch_manager.get_metrics('BatchCreated', start_time, end_time),
-            'total_safe_batches': cloudwatch_manager.get_metrics('TotalSafeBatches', start_time, end_time),
-            'total_expiring_soon_batches': cloudwatch_manager.get_metrics('TotalExpiringSoonBatches', start_time, end_time),
-            'total_expired_batches': cloudwatch_manager.get_metrics('TotalExpiredBatches', start_time, end_time),
-        }
+        })
         
         # Calculate summary statistics
         total_batches = len(db.list_batches())
@@ -374,3 +382,61 @@ def cloudwatch_dashboard(request):
     except Exception as e:
         messages.error(request, f'Error loading dashboard: {str(e)}')
         return redirect('batch_list')
+
+@login_required
+def supply_request_list(request):
+    """View supply requests based on user role"""
+    if request.user.is_manufacturer():
+        # Manufacturers see all requests
+        requests = SupplyRequest.objects.all()
+    else:
+        # Suppliers see only their requests
+        requests = request.user.supply_requests.all()
+    
+    return render(request, 'inventory/supply_request_list.html', {
+        'requests': requests,
+        'is_manufacturer': request.user.is_manufacturer()
+    })
+
+@login_required
+def supply_request_create(request):
+    """Create a new supply request (suppliers only)"""
+    if request.user.is_manufacturer():
+        messages.error(request, 'Only suppliers can create supply requests.')
+        return redirect('supply_request_list')
+    
+    if request.method == 'POST':
+        try:
+            request_data = {
+                'supplier': request.user,
+                'product_name': request.POST['product_name'],
+                'quantity': int(request.POST['quantity']),
+                'description': request.POST.get('description', ''),
+            }
+            supply_request = SupplyRequest.objects.create(**request_data)
+            messages.success(request, 'Supply request created successfully!')
+            return redirect('supply_request_list')
+        except Exception as e:
+            messages.error(request, f'Error creating supply request: {str(e)}')
+    
+    return render(request, 'inventory/supply_request_form.html', {
+        'title': 'Create Supply Request'
+    })
+
+@login_required
+@user_passes_test(is_manufacturer)
+def supply_request_respond(request, request_id):
+    """Respond to a supply request (manufacturers only)"""
+    supply_request = get_object_or_404(SupplyRequest, id=request_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action in ['approve', 'reject']:
+            supply_request.status = 'approved' if action == 'approve' else 'rejected'
+            supply_request.save()
+            messages.success(request, f'Supply request {supply_request.status}.')
+        return redirect('supply_request_list')
+    
+    return render(request, 'inventory/supply_request_respond.html', {
+        'supply_request': supply_request
+    })

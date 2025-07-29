@@ -16,11 +16,11 @@ def get_s3_client():
 
 class User(AbstractUser):
     ROLE_CHOICES = [
-        ('manager', 'Manager'),
-        ('staff', 'Staff'),
+        ('manufacturer', 'Manufacturer'),
+        ('supplier', 'Supplier'),
     ]
     
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='staff')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='supplier')
     department = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=15, blank=True)
 
@@ -40,8 +40,8 @@ class User(AbstractUser):
         related_name='custom_user_set'  # Custom related_name
     )
     
-    def is_manager(self):
-        return self.role == 'manager'
+    def is_manufacturer(self):
+        return self.role == 'manufacturer'
 
     class Meta:
         db_table = 'custom_user'  # Custom table name
@@ -98,3 +98,24 @@ class InventoryBatch(models.Model):
 
     class Meta:
         ordering = ['expiry_date']
+
+class SupplyRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    supplier = models.ForeignKey(User, on_delete=models.CASCADE, related_name='supply_requests')
+    product_name = models.CharField(max_length=200)
+    quantity = models.IntegerField()
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.supplier.username} - {self.product_name} ({self.quantity})"
