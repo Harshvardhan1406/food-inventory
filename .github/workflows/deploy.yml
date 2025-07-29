@@ -1,4 +1,4 @@
-name: Deploy to Elastic Beanstalk
+name: Deploy to EC2
 
 on:
   push:
@@ -9,49 +9,50 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
       with:
-        python-version: '3.9'
-        
-    - name: Install dependencies
+        ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+    
+    - name: Add EC2 to known hosts
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run tests
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: Deploy to EC2
       run: |
-        python manage.py test
+        # Create application directory on EC2 if it doesn't exist
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/${{ secrets.EC2_USER }}/shivam-assignment"
         
-    - name: Generate deployment package
+        # Stop existing application
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd /home/${{ secrets.EC2_USER }}/shivam-assignment && if [ -f scripts/stop.sh ]; then bash scripts/stop.sh; fi"
+        
+        # Sync code to EC2 (excluding unnecessary files)
+        rsync -avz --delete \
+          --exclude='.git' \
+          --exclude='__pycache__' \
+          --exclude='*.pyc' \
+          --exclude='.env' \
+          --exclude='venv' \
+          --exclude='node_modules' \
+          --exclude='.DS_Store' \
+          ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/shivam-assignment/
+        
+        # Make scripts executable
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "chmod +x /home/${{ secrets.EC2_USER }}/shivam-assignment/scripts/*.sh"
+        
+        # Run deployment script
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd /home/${{ secrets.EC2_USER }}/shivam-assignment && bash scripts/deploy.sh"
+    
+    - name: Verify deployment
       run: |
-        zip -r deploy.zip . -x "*.git*" "*.pytest_cache*" "*.venv*" "*.vscode*"
+        # Wait a moment for the server to fully start
+        sleep 10
         
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-        aws-region: us-east-1
-
-    - name: Create S3 Bucket
-      run: |
-        aws s3api create-bucket --bucket foodinventorywebsite-deployments --region us-east-1 || true
+        # Check if Django server is running
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd /home/${{ secrets.EC2_USER }}/shivam-assignment && bash scripts/status.sh"
         
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-        application_name: foodinventorywebsite
-        environment_name: foodinventorywebsite-env
-        region: us-east-1
-        deployment_package: deploy.zip
-        version_label: ${{ github.sha }}
-        existing_bucket_name: foodinventorywebsite-deployments
-        wait_for_deployment: true
-        wait_for_environment_recovery: 300 
+        # Test HTTP endpoint (optional - comment out if no public access yet)
+        # curl -f http://${{ secrets.EC2_HOST }}:8000/ || echo "HTTP check failed - server might not be publicly accessible yet" 

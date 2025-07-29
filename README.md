@@ -1,100 +1,139 @@
-# Food Inventory and Expiry Management System
+# Food Inventory Management System
 
-A cloud-based web application for food manufacturers to track food inventory batches and monitor expiry dates.
+A Django-based web application for managing food inventory with expiration tracking and AWS integration.
 
-## Features
+## 🚀 EC2 Deployment
 
-- Inventory Management (CRUD operations)
-- Automatic Expiry Status Updates
-- Daily Email Notifications for Expiring Items
-- Image Upload Support
-- Responsive Design
+This application is configured for simple deployment on Amazon EC2 using GitHub Actions.
 
-## Tech Stack
+### Prerequisites
 
-- Django (Backend)
-- Tailwind CSS (Frontend)
-- AWS Services:
-  - S3 (Image Storage)
-  - DynamoDB (Database)
-  - Lambda (Daily Expiry Check)
-  - SES (Email Notifications)
-  - API Gateway
+1. **EC2 Instance**: Amazon Linux 2 or Ubuntu server
+2. **Python 3.8+**: Installed on the EC2 instance
+3. **Git**: For cloning the repository
+4. **Security Group**: Allow inbound traffic on port 8000
 
-## Setup Instructions
+### GitHub Secrets Setup
 
-1. Clone the repository:
+Configure the following secrets in your GitHub repository:
+
+- `EC2_SSH_PRIVATE_KEY`: Your EC2 private key (PEM format)
+- `EC2_HOST`: Your EC2 instance public IP or domain
+- `EC2_USER`: SSH username (`ubuntu` for Ubuntu, `ec2-user` for Amazon Linux)
+
+### Deployment Process
+
+The deployment is fully automated via GitHub Actions:
+
+1. **Push to main branch** triggers the deployment
+2. **Code sync** via rsync to EC2
+3. **Dependencies installation** in a Python virtual environment
+4. **Database migrations** are applied automatically
+5. **Django server startup** using `nohup python manage.py runserver`
+
+### Manual Management Scripts
+
+SSH into your EC2 instance and use these scripts:
+
 ```bash
-git clone <repository-url>
-cd food-inventory
+# Deploy/Start the application
+cd /home/ec2-user/shivam-assignment
+bash scripts/deploy.sh
+
+# Stop the application
+bash scripts/stop.sh
+
+# Check application status
+bash scripts/status.sh
 ```
 
-2. Create and activate virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
+### Server Details
+
+- **Port**: 8000
+- **Logs**: `/home/ubuntu/logs/django.log` (Ubuntu) or `/home/ec2-user/logs/django.log` (Amazon Linux)
+- **PID File**: `/home/ubuntu/django.pid` (Ubuntu) or `/home/ec2-user/django.pid` (Amazon Linux)
+- **Media Files**: `/home/ubuntu/media` (Ubuntu) or `/home/ec2-user/media` (Amazon Linux)
+
+### Accessing the Application
+
+After deployment, access your application at:
+```
+http://your-ec2-public-ip:8000
 ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+### Features
 
-4. Create `.env` file in the project root with the following variables:
-```
-DJANGO_SECRET_KEY=your-secret-key
-DEBUG=True
+- 🍎 Food item management with expiration tracking
+- 📸 Image upload to AWS S3
+- ⚡ AWS SQS integration for notifications
+- 🔔 Automated expiry alerts via Lambda functions
+- 👥 User authentication and authorization
+- 📱 Responsive web interface
+
+### Local Development
+
+1. Clone the repository
+2. Create a virtual environment: `python -m venv venv`
+3. Activate it: `source venv/bin/activate` (Linux/Mac) or `venv\Scripts\activate` (Windows)
+4. Install dependencies: `pip install -r requirements.txt`
+5. Run migrations: `python manage.py migrate`
+6. Start development server: `python manage.py runserver`
+
+### Environment Variables
+
+Create a `.env` file on your EC2 instance:
+
+**For Ubuntu:** `/home/ubuntu/.env`
+**For Amazon Linux:** `/home/ec2-user/.env`
+
+```env
+# Django Settings
+DJANGO_SECRET_KEY=your-super-secret-key-here-make-it-long-and-random
+DJANGO_DEBUG=False
+
+# AWS S3 Settings (for file uploads)
 AWS_ACCESS_KEY_ID=your-aws-access-key
-AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_STORAGE_BUCKET_NAME=your-s3-bucket-name
-AWS_S3_REGION_NAME=your-aws-region
-EMAIL_HOST_USER=your-email
-EMAIL_HOST_PASSWORD=your-email-password
+AWS_S3_REGION_NAME=us-east-1
+
+# AWS SQS Settings (for notifications)
+SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/your-account/your-queue
+
+# Database Settings (optional - uses SQLite by default)
+# RDS_HOSTNAME=your-rds-endpoint
+# RDS_DB_NAME=your-database-name  
+# RDS_USERNAME=your-db-username
+# RDS_PASSWORD=your-db-password
+# RDS_PORT=5432
 ```
 
-5. Run migrations:
+### Support
+
+For deployment issues, check:
+1. EC2 security group settings (port 8000 open)
+2. GitHub Actions logs
+3. Application logs at `/home/ubuntu/logs/django.log` (Ubuntu) or `/home/ec2-user/logs/django.log` (Amazon Linux)
+4. Server status using `bash scripts/status.sh`
+
+### Quick Setup Commands
+
+**For Ubuntu EC2:**
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+# SSH into instance
+ssh -i your-key.pem ubuntu@your-ec2-ip
+
+# Setup (one-time)
+curl -o setup.sh https://raw.githubusercontent.com/your-repo/shivam-assignment/main/scripts/ec2-setup-ubuntu.sh
+chmod +x setup.sh && bash setup.sh
 ```
 
-6. Create superuser:
+**For Amazon Linux EC2:**
 ```bash
-python manage.py createsuperuser
-```
+# SSH into instance  
+ssh -i your-key.pem ec2-user@your-ec2-ip
 
-7. Run the development server:
-```bash
-python manage.py runserver
-```
-
-## AWS Lambda Setup
-
-1. Create a new Lambda function in AWS Console
-2. Set up environment variables:
-   - DYNAMODB_TABLE
-   - SENDER_EMAIL
-   - NOTIFICATION_EMAIL
-
-3. Create an EventBridge (CloudWatch Events) rule to trigger the Lambda function daily
-
-4. Set up necessary IAM roles with permissions for:
-   - DynamoDB
-   - SES
-   - CloudWatch Logs
-
-5. Deploy the Lambda function:
-   - Zip the contents of `lambda_functions/`
-   - Upload to AWS Lambda
-
-## Usage
-
-1. Access the admin interface at `/admin`
-2. Add/Edit/Delete inventory batches
-3. View batch status on the dashboard
-4. Receive daily email notifications for expiring items
-
-## License
-
-MIT License 
+# Setup (one-time)
+curl -o setup.sh https://raw.githubusercontent.com/your-repo/shivam-assignment/main/scripts/ec2-setup.sh
+chmod +x setup.sh && bash setup.sh
+``` 
