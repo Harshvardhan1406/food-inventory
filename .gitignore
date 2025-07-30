@@ -34,8 +34,4 @@ ENV/
 .idea/
 .vscode/
 *.swp
-*.swo
-
-
-.env
-.env.local 
+*.swo 
