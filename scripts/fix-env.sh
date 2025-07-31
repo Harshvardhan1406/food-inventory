@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Fix Environment Variables Script
-echo "🔧 Fixing environment variables..."
+echo "Fixing environment variables..."
 
 # Create a clean .env file
 cat > /home/ubuntu/.env << 'EOF'
@@ -14,18 +14,18 @@ AWS_S3_REGION_NAME=us-east-1
 SQS_QUEUE_URL=
 EOF
 
-echo "✅ Created clean .env file"
+echo "Created clean .env file"
 
 # Load environment variables properly
 set -o allexport
 source /home/ubuntu/.env
 set +o allexport
 
-echo "✅ Environment variables loaded"
+echo "Environment variables loaded"
 
 # Show what's loaded
-echo "📋 Current environment:"
+echo "Current environment:"
 echo "DJANGO_SECRET_KEY: $(if [ -n "$DJANGO_SECRET_KEY" ]; then echo "SET"; else echo "NOT SET"; fi)"
 echo "DJANGO_DEBUG: $DJANGO_DEBUG"
 
-echo "🚀 Now you can run: bash scripts/deploy.sh" 
+echo "Now you can run: bash scripts/deploy.sh" 
