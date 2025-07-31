@@ -1,15 +1,10 @@
 #!/bin/bash
 
-# EC2 Deployment Script for Django Food Inventory Application
-# This script handles the complete deployment process
-
-set -e  # Exit on any error
+set -e
 
 echo "🚀 Starting deployment process..."
 
-# Variables (Update these paths based on your EC2 user)
-# For Amazon Linux 2: use /home/ec2-user
-# For Ubuntu: use /home/ubuntu
+
 APP_DIR="/home/ubuntu/shivam-assignment"
 PYTHON_ENV="/home/ubuntu/venv"
 LOG_FILE="/home/ubuntu/logs/django.log"
@@ -54,14 +49,14 @@ if [ -f "$PID_FILE" ]; then
     rm -f $PID_FILE
 fi
 
-# Kill any remaining Django processes
+
 pkill -f "manage.py runserver" || true
 
 # Run Django migrations
 echo "🗃️ Running database migrations..."
 python manage.py migrate --noinput
 
-# Start Django development server with nohup
+
 echo "🌟 Starting Django server..."
 nohup python manage.py runserver 0.0.0.0:8000 > $LOG_FILE 2>&1 &
 
@@ -73,7 +68,6 @@ echo "📊 Server is running on port 8000"
 echo "📝 Logs are available at: $LOG_FILE"
 echo "🆔 Process ID saved to: $PID_FILE"
 
-# Wait a moment and check if server started successfully
 sleep 3
 if ps -p $(cat $PID_FILE) > /dev/null 2>&1; then
     echo "✅ Django server is running successfully!"
