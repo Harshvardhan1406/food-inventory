@@ -7,7 +7,7 @@ from datetime import datetime
 
 class SQSProcessor(threading.Thread):
     def __init__(self):
-        super().__init__(daemon=True)  # Run as daemon thread
+        super().__init__(daemon=True)
         self.running = True
         
     def setup_sqs(self):
@@ -39,7 +39,6 @@ class SQSProcessor(threading.Thread):
                 f"  Expires in {item['days_to_expiry']} days\n"
             )
         print(message)
-        # You could add email notifications here
     
     def run(self):
         """Main processing loop"""
