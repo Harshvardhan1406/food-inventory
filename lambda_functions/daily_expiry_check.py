@@ -72,10 +72,9 @@ def lambda_handler(event, context):
                 expiring_soon.append(item)
             elif new_status == "Expired":
                 expired.append(item)
-        
-        # If there are items needing attention, send email
+
         if expiring_soon or expired:
-            # Prepare email content
+
             subject = "Food Inventory Alert: Items Requiring Attention"
             body = "The following items require your attention:\n\n"
             
@@ -90,7 +89,7 @@ def lambda_handler(event, context):
                 for item in expiring_soon:
                     body += f"- Batch {item['batch_id']}: {item['product_name']} (Expires on {item['expiry_date']})\n"
             
-            # Send email
+
             send_email(subject, body, os.environ['NOTIFICATION_EMAIL'])
         
         return {
