@@ -1,6 +1,6 @@
 import boto3
 from django.conf import settings
-from datetime import datetime
+from datetime import datetime, date
 
 class DynamoDBInventory:
     def __init__(self):
@@ -72,7 +72,7 @@ class DynamoDBInventory:
             if key != 'batch_id':  # Skip primary key
                 update_expr += f"#{key} = :{key}, "
                 expr_names[f"#{key}"] = key
-                expr_values[f":{key}"] = value if not isinstance(value, datetime) else value.isoformat()
+                expr_values[f":{key}"] = value if not isinstance(value, (datetime, date)) else value.isoformat()
         
         # Add updated_at timestamp
         update_expr += "#updated_at = :updated_at"
