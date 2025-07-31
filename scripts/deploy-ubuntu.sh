@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# EC2 Deployment Script for Django Food Inventory Application - UBUNTU VERSION
-# This script handles the complete deployment process
 
 set -e  # Exit on any error
 
@@ -28,7 +26,6 @@ fi
 echo "🔄 Activating virtual environment..."
 source $PYTHON_ENV/bin/activate
 
-# Navigate to application directory
 cd $APP_DIR
 
 # Install/update dependencies
@@ -71,7 +68,7 @@ echo "📊 Server is running on port 8000"
 echo "📝 Logs are available at: $LOG_FILE"
 echo "🆔 Process ID saved to: $PID_FILE"
 
-# Wait a moment and check if server started successfully
+
 sleep 3
 if ps -p $(cat $PID_FILE) > /dev/null 2>&1; then
     echo "✅ Django server is running successfully!"
